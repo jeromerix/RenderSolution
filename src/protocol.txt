@@ -1,0 +1,88 @@
+Render API Protocol:
+
+Na twee opvolgende newlines sluit de server de connectie.
+
+command					arguments			beschrijving				
+
+open_port 				<port>				open een poort voor ZIP bestand upload
+
+close_port				<port>				sluit een poort voor ZIP bestand upload 
+
+get_projects								haalt een lijst op van projects			
+
+force_render				<project_num>			rendert project <project_num>	
+									En cancel als deze al met renderen 
+									bezig is.
+
+set_zip_path				<path>				Waar de gesluiste zip moet worden 
+									opgeslagen (evt voegt het een nr toe als de bestandsnaam al bestaat)
+
+get_zip_path								geeft huidige zip path weer				
+											
+get_render_status			<project_num>			Haalt de render status op.
+									(starttijd, eindijd) etc.
+
+add_project				<project_num>			Voegt een project toe aan de backend
+					<zip_path>			Zip file name (om uit te pakken)
+					<directory_path>		Directory voor uitgepakte files
+
+delete_project				<project_num>			Verwijdert een project van de backend
+
+set_render_attributes			<project_num>		
+					<aerender_exe>			eg "C:\Program Files\Adobe\Adobe After Effects\Supported Files\aerender.exe"
+					<project_path>			eg "C:\mijn projecten\render.aep"
+					<composition_name>		eg. "Comp 1"
+					<render_settings>		eg. "Resolution: Half; Quality: Draft"
+					<output_settings>		eg. "Crop: true; Crop Top: 4"
+					<output_file>			eg. "C:\out\mijn_filmpje.avi" 						
+
+get_render_attributes	<project_num>					geeft alle render attributen				
+
+
+Voorbeelden van JSON data: 
+
+{
+	"command": "open_port",
+	"port": 4000
+}
+
+{
+	"command": "close_port",
+	"port": 4000
+}
+	 
+
+Error Handling Types:
+
+		Num		Description
+	
+		0		No data received
+		1		JSON data invalid
+		
+		2		No command defined.
+		3		No such command <arg>
+		
+		4		Could not bind socket
+		5		No such port <arg>
+
+		6		No active projects
+		7		No such project
+		
+		8		No such attribute <arg> for command <cmd>
+		9		Zip file corrupt
+		
+		10		Could not start aerender.exe
+				<arg>
+
+		11		Rendering canceled
+
+		12		No <arg> Specified
+
+		13		Could not add project
+		14		Could not det projects
+		
+		15		Could not delete project
+		
+		16 		Could not get render attributes
+		17		Could not set render attributes
+		

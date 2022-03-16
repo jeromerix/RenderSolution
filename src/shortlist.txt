@@ -1,0 +1,35 @@
++ done
+& busy
+- todo
+
++ add_project
+
++ delete_project
+
++ get_projects			
+
++ get_render_attributes
+
++ set_render_attributes		
+
+TESTEN: 
+
+/* Morgen */
++ save_file
++ receive_file 
+
+/* woensdag, do, vr */
+- do_render	
+- get_render_status
+
+/*
+
+	Wensen?
+	
+	user render credits ?
+	
+	get project files xml.
+	
+	
+	
+*/

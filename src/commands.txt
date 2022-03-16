@@ -1,0 +1,6 @@
+
+{ "command" : "add_project", "arguments": { "project_name" : "test", "project_num": "14" }}
+
+{ "command" : "get_projects" }
+
+{ "command" : "get_projects", "arguments": { "test": "aap" } }
