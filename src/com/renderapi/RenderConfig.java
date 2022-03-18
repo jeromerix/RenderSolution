@@ -182,7 +182,7 @@ public class RenderConfig {
 		}
 	
 		
-		retval = MessageHandler.prepareMessage(RenderAPI.NetworkMessageType.SETATTR, "" );
+		retval = MessageHandler.prepareMessage(RenderAPI.NetworkMessageType.PROJECTSYNC, "" );
 		
 		
 		return retval;

@@ -5,6 +5,7 @@ import java.net.*;
 
 import org.json.simple.*;
 import org.json.simple.parser.*;
+
 import java.nio.charset.StandardCharsets;
 	
 class ClientHandler extends Thread 
@@ -85,7 +86,7 @@ class ClientHandler extends Thread
 		}
 	
 		// Alleen het get_projects commando heeft geen arguments nodig.
-		if ( json.containsKey( "arguments" ) == false && command.compareTo("get_projects") != 0 ) {
+		if ( json.containsKey( "arguments" ) == false && command.compareTo("get_projects") != 0 && command.compareTo("get_system_status") != 0 ) {
 			retMsg = MessageHandler.prepareError(RenderAPI.NetworkErrorType.NOCMDARG, "Missing arguments." );
 			sendText( retMsg );
 			return;

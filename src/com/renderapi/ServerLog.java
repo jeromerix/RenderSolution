@@ -61,11 +61,12 @@ public class ServerLog {
 		} catch (FileNotFoundException e) {
 			// DESIGNQUESTION Als er op de back-end de logfile niet toegankelijk wordt gemaakt
 			// b.v. via FTP, dan exit de server? Testen?
-			ServerLog.attachMessage( RenderAPI.MessageType.FATAL, "Could not open server log file: " + RenderAPI.serverLogFilename );
+			System.out.println( "FATAL Could not open server log file: " + RenderAPI.serverLogFilename );
 			System.exit(0);
 		}
 		if( !file.canRead() || !file.canWrite() ) {
-			ServerLog.attachMessage( RenderAPI.MessageType.FATAL, "Could not open server log file: " + RenderAPI.serverLogFilename );
+			System.out.println( "FATAL Could not open server log file: " + RenderAPI.serverLogFilename );
+			System.out.println();
 			System.exit(0);
 		}
 		try {

@@ -7,12 +7,12 @@ public class RenderAttributes {
 	String projectName;
 		
 	// DESIGNQUESTION aerenderexe final maken, hard-coded?
-	String aerenderExe = "undefined";
-	String projectPath = "undefined";
-	String compositionName = "undefined";
-	String renderSettings = "undefined";
-	String outputSettings = "undefined";
-	String outputFile = "undefined";
+	String aerenderExe = "";
+	String projectPath = "";
+	String compositionName = "";
+	String renderSettings = "";
+	String outputSettings = "";
+	String outputFile = "";
 
 	String currentFile;
 	long currentFileSize;

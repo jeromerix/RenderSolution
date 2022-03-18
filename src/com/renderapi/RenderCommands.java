@@ -4,8 +4,9 @@ package com.renderapi;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
+import org.json.simple.*;
+import org.json.simple.parser.*;
+
 import java.io.*;
 import java.net.Socket;
 
@@ -111,60 +112,81 @@ public class RenderCommands {
 	}
 	
 	public String doCmdRecvFile(String arg) {
-		String msg = "undefined";
-
-		/*
-		 
+		ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "doCmdRecvFile" );		
+		// Receive file metadata
 		int index = -1;
-
+		String msg = "";
 		int projNum = -1;
 		
+		// probeer het JSON request te parsen
 		JSONParser parser = new JSONParser();
 		JSONObject json;	
 
 		try {
 			json = (JSONObject) parser.parse(arg);
 		} catch (Exception e ) {
-			msg = MessageHandler.prepareError( RenderAPI.NetworkErrorType.JSONINVALID, "" );
+			// handle errors
+			msg = MessageHandler.prepareError( RenderAPI.NetworkErrorType.JSONINVALID , "" );
 			return msg;
 		}
 		
 		if ( json.containsKey( "project_num" ) == false ) {
+			// contorleer project_num
 			msg = MessageHandler.prepareError( RenderAPI.NetworkErrorType.NOCMDARG, "Missing project_num argument." );
 			return msg;
 		}
 	
-		
+		// DESIGNQUESTION error als de project_num null is?
 		String projNumStr = json.get("project_num").toString() ;
 		
 		projNum = Integer.parseInt( projNumStr );
 	
+		// haal de index op van het project
 		for( RenderAttributes attr : RenderAPI.projects ) {
 			if(attr.projectNum == projNum  ) {
 				index = RenderAPI.projects.indexOf(attr);
 			}
 		}
 		
+		// geef fout als project niet in de lijst staat
 		if( index == -1 ) {
-			// ??????
-			msg = MessageHandler.prepareError( RenderAPI.NetworkErrorType.PROJECTGETERR , "Project not found. Project Num: " + projNum );
+			msg = MessageHandler.prepareError( RenderAPI.NetworkErrorType.PROJECTGETERR, "Project not found. Project Num: " + projNum );
 			return msg;
 		} 
 
-		String fileName;
 		
+		ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "Haal file data.." );		
+		
+		// Haal de file metadata op uit het save request commando
+		String fileName;
+		String fileSize;
+		
+		long size = -1;
 		
 		fileName = json.get("file_name").toString();
 		
-		RenderAttributes data = RenderAPI.projects.get(index);
-			
-		data.currentFile = fileName;
+		try {
+			fileSize = json.get("file_size").toString();
+		} catch ( NullPointerException e) {
+			msg = MessageHandler.prepareError( RenderAPI.NetworkErrorType.UNKNOWNFILESIZE, projNumStr  );
+			return msg;
+		}
+
+		// start de thread voor het ophalen van de file
+		FileRecvHandler fileThread;
+		fileThread = new FileRecvHandler( size, projNumStr, fileName );
+
+		fileThread.start();
 		
-		RenderAPI.projects.set(index, data);
+		// wacht op de wait message
+		while( msg == "" ) {
+			msg = FileRecvHandler.getClientText();
+		}
+		FileRecvHandler.clearClientText();
+
+		// Log de open port
+		ServerLog.attachMessage( RenderAPI.MessageType.NOTICE, "FileHandler created. filesize: " + size + " port: " + fileThread.getActivePort() );
 		
-		msg = MessageHandler.prepareMessage( RenderAPI.NetworkMessageType.DOWNLOADFILE, projNumStr, 0, fileName, -1);
-			
-		*/			
 		return msg;
 		
 	}
@@ -251,7 +273,7 @@ public class RenderCommands {
 			retval = MessageHandler.prepareError( RenderAPI.NetworkErrorType.JSONINVALID , arg );
 			return retval;
 		}
-		
+				
 		// Controleer op project_num argument
 		if ( json.containsKey( "project_num" ) == false ) {
 			retval = MessageHandler.prepareError( RenderAPI.NetworkErrorType.PROJECTGETERR, "Missing project_num argument." );
@@ -468,6 +490,9 @@ public class RenderCommands {
 		return msg;	
 	}
 	 
+	public String doCmdGetSystemStatus( String arg ) {
+		return RenderAPI.systemOutJson();
+	}
 	
 	public String doCmdSetRenderAttributes(String arg ) {
 		int index = -1;
@@ -623,6 +648,8 @@ public class RenderCommands {
 			retval = this.doCmdGetProjectFiles(arg); 
 		} else if( cmd.compareTo( "sync_project_files" ) == 0 ) {
 			retval = this.doCmdSyncProjectFiles(arg); 
+		} else if( cmd.compareTo( "get_system_status" ) == 0 ) {
+			retval = this.doCmdGetSystemStatus(arg); 
 		}
 
 		return retval;

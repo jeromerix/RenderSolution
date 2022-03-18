@@ -2,6 +2,7 @@ package com.renderapi;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner; // Import the Scanner class to read text files
 import java.net.*;
 
@@ -32,6 +33,103 @@ public class FileTransfer {
 		this.fileSize = size;
 	}
 	
+	
+	public String recvFile(Socket sock, ServerSocket serverSock ) {
+
+		String msg = "";
+		// Maak het file object aan
+		openFile = new File( this.fileName );
+
+		this.fileSize = openFile.length();
+		
+		// Controleer of het bestand te schrijven is
+		boolean write;
+		write = openFile.canRead();
+		
+		// Stuur error als file niet te schrijven is 
+		if( !write ) {
+			msg = MessageHandler.prepareError(RenderAPI.NetworkErrorType.FILETRANSFERERR,  "Can not read from file: " +  this.fileName  );
+			return msg;
+		}
+	
+		// File input stream
+		InputStream inStream;
+		
+		// Debug log dat er geprobeerd wordt om naar file te schrijven
+		ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "Trying to read file: " + this.fileName );
+		
+		try {
+			inStream = new FileInputStream( openFile );
+		} catch(FileNotFoundException e) {
+			// Handle de File Not Found exceptie
+			msg = MessageHandler.prepareError(RenderAPI.NetworkErrorType.FILETRANSFERERR,  "File not found: " +  this.fileName + " Exception: " + e.getMessage() );
+			return msg;
+		} 
+		
+		//hou de bestandsgrootte bij
+		long totalBytes = 0;
+
+		// Schrijf de file size naar de debug log
+		ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "File size: " + this.fileSize );
+
+		// Transfer buffer
+		byte[] buffer = new byte[FileTransfer.blockSize];
+		int bytesRead = 0;
+		
+		
+		// Output stream wordt niet gebruikt
+		DataInputStream dataInput;
+		DataOutputStream outStream;
+
+		
+		ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "Transfer via port: " + serverSock.getLocalPort() );
+			
+		try {
+			outStream = new DataOutputStream ( sock.getOutputStream() );	
+			dataInput = new DataInputStream( inStream );
+		
+			do {
+				// Lees FileTransfer.blockSize bytes van de stream en hou de totaal grootte bij
+				bytesRead = dataInput.readNBytes(buffer, 0, FileTransfer.blockSize );
+				totalBytes += bytesRead;
+				
+				// Debug hoeveel bytes er al gelezen zijn
+				ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "Read from socket bytes: " + totalBytes );
+
+				// schrijf de buffer naar de file
+				if( totalBytes <  this.fileSize  ) {
+					outStream.write(buffer, 0,  bytesRead); 
+				}
+				// controleer de grootte
+			} while( totalBytes < this.fileSize );
+
+			ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "TotalBytes: " + totalBytes + " FileSize: " + this.fileSize );
+				 
+			long left;
+			
+			left = this.fileSize - totalBytes + bytesRead;
+			
+			ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "Bytes left: " + left );
+
+			dataInput.readNBytes(buffer,0,(int)left);
+			outStream.write(buffer,0,(int)left); 
+			
+			
+			// Struit de outstream
+			outStream.flush();
+			outStream.close();
+
+		} catch (IOException e ) {
+			// Handle IO exception en schrijf JSON error als die optreed
+			ServerLog.attachMessage( RenderAPI.MessageType.ERROR, "IOException: " + e.getMessage() );
+			msg = MessageHandler.prepareError(RenderAPI.NetworkErrorType.FILETRANSFERERR,  "Could not save file: " +  this.fileName  );
+			return msg;
+		}
+		
+		
+		return msg;
+	
+	}
 	
 	public String saveFile() {
 
