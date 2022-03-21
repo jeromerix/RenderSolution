@@ -3,7 +3,8 @@ package com.renderapi;
 import java.io.*;
 import java.net.*;
 
-import org.json.*;
+import org.json.simple.*;
+import org.json.simple.parser.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 	
@@ -114,6 +115,9 @@ class FileRecvHandler extends Thread
 		TransferAttributes attr;
 		attr = new TransferAttributes(this.serverSock, this.activePort, this.file, this.size );
 		transferQueue.add(attr);
+
+		// Schrijf naar de server log dat de TCP connectie er is
+		ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "Download Transfer queue size: " + transferQueue.size() );
 
 		// Debug the transfer queue 
 		for(TransferAttributes attributes: transferQueue ) {

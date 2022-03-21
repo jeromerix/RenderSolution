@@ -1,15 +1,28 @@
 package com.renderapi;
 
 import java.io.*;
+
 import java.net.*;
 import java.util.ArrayList;
 
 import org.json.simple.*;
 import org.json.simple.parser.*;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+/**
+ * De RenderAPI is een applicatie die het mogelijk maakt voor de gebruiker
+ * om via de API, Adobe Aftere Effects commando's uit te voeren op de server.
+ *
+ * @author      Dagmar Hofman
+*/
 public class RenderAPI {
 	
 	// Voor de server log
+	/**
+	 * De ServerLog message types: NOTICE, WARNING, ERROR, FATAL en DEBUG
+	*/
 	public static enum MessageType { NOTICE, WARNING, ERROR, FATAL, DEBUG };
 
 	// Of nog beter: via de commandline arguments?
@@ -17,21 +30,25 @@ public class RenderAPI {
 	
 	// Deze twee variabelen ophalen via INI file
 	static int port = 4242; 
-	static String serverLogFilename = "/RenderSolutions/logfile.txt"; 
-	static String serverStatusJSON = "/RenderSolutions/status.json"; 
+	static String serverLogFilename = "c:\\RenderSolutions\\logfile.txt"; 
+	static String serverStatusJSON = "c:\\RenderSolutions\\status.json"; 
 	
 	//regelt add project, en het wijzigen van render attributes
 	static RenderConfig settings;
 	
 	// lijst met projecten
 	static ArrayList<RenderAttributes> projects;
+	static ArrayList<QueueAttributes> queue;
 	
 	// globale server log file
 	// DESIGNQUESTION deze via netwerk en JSON toegankelijk maken?
 	static ServerLog log;
 	
-	// enum voor netwerk messages
-	enum NetworkMessageType {
+	/**
+	 * De MessageHandler class genereert aan de hand van een 
+	 * NetworkMessageType de boodschap die naar de socket gestuurt moet worden.
+	*/
+	public static enum NetworkMessageType {
 		PROJECTADD(0),
 		PROJECTDELETE(1),
 		GETATTR(2),
@@ -41,7 +58,8 @@ public class RenderAPI {
 		FILESAVED(6),
 		PROJECTADDFILE(7),
 		PROJECTDELFILE(8),
-		PROJECTSYNC(9);
+		PROJECTSYNC(9),
+		RENDERCMDOK(10);
 
 		int msg;
 		
@@ -55,8 +73,11 @@ public class RenderAPI {
 	    }
 	};
 	
-	// enum voor netwerk error messages
-	enum NetworkErrorType {
+	/**
+	 * De MessageHandler class genereert aan de hand van een 
+	 * NetworkErrorType de foutmelding die naar de socket gestuurt moet worden.
+	*/
+	public static enum NetworkErrorType {
 		NODATA(0),
 		JSONINVALID(1),
 		NOCMDARG(2),
@@ -73,7 +94,8 @@ public class RenderAPI {
 		FILENOTFOUNDERR(13),
 		PROJECTFILEADDERR(14),
 		PROJECTFILEDELERR(15),
-		PROJECTSYNCERR(16);
+		PROJECTSYNCERR(16),
+		RENDERCMDFAIL(17);
 		
 		int err;
 		
@@ -87,8 +109,24 @@ public class RenderAPI {
 	    }
 	}
 	
+	/**
+	* Deze functie leest alle bytes uit een bestand,  
+	* naar een string
+	* 
+	* @param filePath De bestandsnaam
+	* @return De inhoud van het bestand 
+	*/
 	public static String readAllBytes(String filePath) 
     {
+		
+		File file;
+		file = new File(filePath);
+		
+		if( file.exists() == false ) {
+			ServerLog.attachMessage( RenderAPI.MessageType.WARNING, "Status file did not exist. Created.");
+			systemOutJson();
+			return "";
+		}
         StringBuilder contentBuilder = new StringBuilder();
         try  
         {
@@ -106,6 +144,10 @@ public class RenderAPI {
         return contentBuilder.toString();
     }
 	
+	/**
+	* Deze functie leest de <b>system.json</b> file.  
+	* En zet de variabelen.
+	*/
 	public static void systemParseJSON() {
 
 		String fileData;
@@ -126,12 +168,19 @@ public class RenderAPI {
 			return;
 		}
 
-		ArrayList<JSONObject> systemDataList;
-		JSONObject systemData = (JSONObject)json.get("system_data");
-		systemDataList = new ArrayList<JSONObject>(systemData.values());
+
+		JSONObject systemData;
 		
-		//deze lijst alle projecten
-		for( JSONObject tmp: systemDataList ) {
+		systemData = (JSONObject)json.get("system_data");
+		
+		JSONArray projects;
+		
+		projects = (JSONArray)systemData.get("project_data");
+		
+		ArrayList<JSONObject> projectData = new ArrayList<JSONObject>(projects);
+		
+		for( JSONObject tmp: projectData ) {
+			ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "tmp: " + tmp.toJSONString() );
 			RenderAttributes tmpAttr = new RenderAttributes();
 			String projNumStr;
 			
@@ -140,6 +189,7 @@ public class RenderAPI {
 			
 			tmpAttr.aerenderExe = tmp.get("aerender_exe").toString();
 			
+			tmpAttr.projectName = tmp.get("project_name").toString();
 			tmpAttr.projectPath = tmp.get("project_path").toString();
 			tmpAttr.compositionName = tmp.get("composition_name").toString();
 			tmpAttr.renderSettings= tmp.get("render_settings").toString();
@@ -158,35 +208,132 @@ public class RenderAPI {
 				fileName = (String)projectFiles.get(i);
 				tmpAttr.projectFiles.add(fileName);
 			}
-			
-			RenderAPI.projects.add(tmpAttr);	
+				
+			RenderAPI.projects.add(tmpAttr);
 		}
+		
+		JSONArray renderQueue;
+		
+		renderQueue = (JSONArray)systemData.get("queue");
+		
+		ArrayList<JSONObject> queueData = new ArrayList<JSONObject>(renderQueue);
+		String msg = "";
+		
+		for( JSONObject tmp: queueData ) {
+			JSONObject data = (JSONObject) tmp.get("record");
+			ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "queue tmp: " + data.toJSONString() );
+			// Controleer of JSON klopt
+			JSONParser queueParser = new JSONParser();
+			JSONObject queueJson;	
+
+			try {
+				queueJson = (JSONObject) queueParser.parse(data.toJSONString());
+			} catch (Exception e ) {
+				ServerLog.attachMessage( RenderAPI.MessageType.ERROR, "Parse Error. " + e.getMessage() );
+				return;
+			}
+			
+			QueueAttributes attr = new QueueAttributes();
+			String attrId = queueJson.get("id").toString();
+			
+			Date startDate = new Date();
+			SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");  
+			String dateStr;
+			
+			attr.id = Integer.parseInt(attrId);
+			RenderCommands.renderCommandCount = attr.id + 1;
+			
+			dateStr = queueJson.get("start").toString(); 
+			try {
+				attr.start = formatter.parse(dateStr);
+			} catch ( Exception e ) {
+				ServerLog.attachMessage( RenderAPI.MessageType.ERROR, "Could not parse: " + dateStr );
+			}
+			
+			attr.attributes = new RenderAttributes();
+			
+			attr.attributes.aerenderExe = queueJson.get("aerender_exe").toString();
+			attr.attributes.projectPath = queueJson.get("project_path").toString();
+			attr.attributes.compositionName = queueJson.get("comp_name").toString();
+			attr.attributes.renderSettings = queueJson.get("render_settings").toString();
+			attr.attributes.outputSettings = queueJson.get("output_settings").toString();
+			attr.attributes.outputFile = queueJson.get("output_file").toString();
+
+			RenderAPI.queue.add(attr);
+		}
+		
+		
+	}
+		
+
+	public static void networkLoop( ServerSocket serverSock) {
+		// de Socket
+		Socket sock = null;
+
+		try
+		{
+			// open de socket voor de client
+			sock = serverSock.accept();
+			
+			// log
+			ServerLog.attachMessage( RenderAPI.MessageType.NOTICE, "A new client is connected: " + sock);
+			
+			// maak de data streams
+			DataInputStream dataInput = new DataInputStream(sock.getInputStream());
+			DataOutputStream dataOutput = new DataOutputStream(sock.getOutputStream());
+			
+			// maak de client handler thread
+			Thread t = new ClientHandler(sock, dataInput, dataOutput, settings, queue);
+
+			// Start de thread
+			t.start();
+		}
+		catch (Exception e) {
+			try {
+				// Sluit de thread
+				ServerLog.attachMessage( RenderAPI.MessageType.NOTICE, "Closing connection: " + sock);
+				sock.close();
+				serverSock.close();
+			} catch ( IOException ex ) {
+				// geef de IO error, als er iets misgaat
+				ServerLog.attachMessage( RenderAPI.MessageType.ERROR, "IO Error " + ex.getMessage()  );
+			}
+			e.printStackTrace();
+		}
+		
+		ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "Calling sytemOutJson" );
 	}
 
+		
+	/**
+	* Deze functie scrhijft alle variabelen naar de <b>system.json</b> file.
+	*/
 	public static String systemOutJson() {
 		String json  = "";
 		
 		ArrayList<RenderAttributes> attributes;
 		attributes = RenderAPI.projects;
 		
-		json = "{ \"system_data\" : { \n";
+		json = "{ \"system_data\" : { \"project_data\" : [ \n";
 		int i = 0;
 		for( RenderAttributes attr: attributes ) {
 
 			ArrayList<String> projectFiles;
 			
 			projectFiles = attr.projectFiles;
-			json += "\"project_"+ i++ +"\": { ";						
+			json += " { ";						
 			json += "\"project_num\" : " + attr.projectNum + ",";
-			json += "\"aerender_exe\" : \"" + attr.aerenderExe + "\",";
-			json += "\"project_path\" : \"" + attr.projectPath + "\",";
-			json += "\"composition_name\" : \"" + attr.compositionName + "\",";
-			json += "\"render_settings\" : \"" + attr.renderSettings + "\",";
-			json += "\"output_settings\" : \"" + attr.outputSettings + "\",";
+			json += "\"project_name\" : \"" + attr.projectName  + "\",";
+			json += "\"aerender_exe\" : \"" + attr.aerenderExe  + "\",";
+			json += "\"project_path\" : \"" + attr.projectPath  + "\",";
+			json += "\"composition_name\" : \"" +  attr.compositionName  +  "\",";
+			json += "\"render_settings\" : \"" + attr.renderSettings  +  "\",";
+			json += "\"output_settings\" : \"" + attr.outputSettings  + "\",";
 			json += "\"output_file\" : \"" + attr.outputFile + "\",";
 			
 			json += "\"files\" : [ ";
 			for( String fileName: projectFiles ) {
+				fileName = fileName.replaceAll("\\\\+","\\\\\\\\");
 				json += "\"" + fileName + "\",";
 			}
 			json = json.substring(0, json.length() - 1);  
@@ -194,11 +341,20 @@ public class RenderAPI {
 			json += "},";						
 		}
 		json = json.substring(0, json.length() - 1);  
-		json += "} }";
+		json += " ],";
+
+		String temp;
+		temp = RenderCommands.doCmdGetProjectQueue();
+		json += temp.substring(1, temp.length());
+		
+		json += " }";
+		
+		ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "JSON generated: " + json );
 		
 		File outFile = new File( RenderAPI.serverStatusJSON );
 
 		try {
+			outFile.delete();
 			outFile.createNewFile();
 		} catch (IOException e) {
 			// Log de error naar de server log
@@ -236,7 +392,11 @@ public class RenderAPI {
 		}
 		return json;
 	}
-
+	
+	
+	/**
+	* De <b>main</b> routine.
+	*/
 	public static void main( String[] args ) {
 				
 		// Maak de server log
@@ -250,7 +410,7 @@ public class RenderAPI {
 		// settings en projects
 		settings = new RenderConfig();
 		projects = new ArrayList<RenderAttributes>();
-		
+		RenderAPI.queue = new ArrayList<QueueAttributes>();
 		try {
 			// probeer de server socket te openen
 			serverSock = new ServerSocket( port );
@@ -262,51 +422,15 @@ public class RenderAPI {
 				
 		// Server now listens to port
 		ServerLog.attachMessage( RenderAPI.MessageType.NOTICE, "Server started at port: " + port );
-		
+
 		// Lees de systeem status JSON
-		
 		systemParseJSON();
-		
+				
 		// Oneindige lus voor netwerk client requests
 		while (true)
 		{
-			// de Socket
-			Socket sock = null;
-			
-			try
-			{
-				// open de socket voor de client
-				sock = serverSock.accept();
-				
-				// log
-				ServerLog.attachMessage( RenderAPI.MessageType.NOTICE, "A new client is connected: " + sock);
-				
-				// maak de data streams
-				DataInputStream dataInput = new DataInputStream(sock.getInputStream());
-				DataOutputStream dataOutput = new DataOutputStream(sock.getOutputStream());
-				
-				// maak de client handler thread
-				Thread t = new ClientHandler(sock, dataInput, dataOutput, settings);
-
-				// Start de thread
-				t.start();
-			
-				// schrijf de system XML
-				systemOutJson();
-			}
-			catch (Exception e) {
-				try {
-					// Sluit de thread
-					ServerLog.attachMessage( RenderAPI.MessageType.NOTICE, "Closing connection: " + sock);
-					sock.close();
-					serverSock.close();
-				} catch ( IOException ex ) {
-					// geef de IO error, als er iets misgaat
-					ServerLog.attachMessage( RenderAPI.MessageType.ERROR, "IO Error " + ex.getMessage()  );
-				}
-				e.printStackTrace();
-			}
-			
+			networkLoop( serverSock );
+			// renderLoop();
 		}
 	}
 }

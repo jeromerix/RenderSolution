@@ -291,18 +291,24 @@ public class RenderConfig {
 		RenderAPI.projects.set(index, data);
 	}
 	
+	public static String doEscape( String input ) {
+		String retval;
+		retval = input.replaceAll("\"", "");
+		return retval;
+	}
+	
 	public String getRenderAttr( int index )
 	{
 		// Haal de JSON op met render attributes
 		String msg;
 		msg = "{ \"render_attributes\": ";
 		msg += " { \"project_num\": " + RenderAPI.projects.get(index).projectNum + ", ";
-		msg += "  \"aerender_exe\": \"" + RenderAPI.projects.get(index).aerenderExe + "\",";
-		msg += "  \"project_path\": \"" + RenderAPI.projects.get(index).projectPath + "\",";
-		msg += "  \"composition_name\": \"" + RenderAPI.projects.get(index).compositionName + "\",";
-		msg += "  \"render_settings\": \"" + RenderAPI.projects.get(index).renderSettings + "\",";
-		msg += "  \"output_settings\": \"" + RenderAPI.projects.get(index).outputSettings + "\",";
-		msg += "  \"output_file\": \"" + RenderAPI.projects.get(index).outputFile + "\"} ";
+		msg += "  \"aerender_exe\": \"" + doEscape( RenderAPI.projects.get(index).aerenderExe) + "\",";
+		msg += "  \"project_path\": \"" + doEscape( RenderAPI.projects.get(index).projectPath) + "\",";
+		msg += "  \"composition_name\": \"" + doEscape( RenderAPI.projects.get(index).compositionName) + "\",";
+		msg += "  \"render_settings\": \"" + doEscape( RenderAPI.projects.get(index).renderSettings) + "\",";
+		msg += "  \"output_settings\": \"" + doEscape( RenderAPI.projects.get(index).outputSettings) + "\",";
+		msg += "  \"output_file\": \"" + doEscape( RenderAPI.projects.get(index).outputFile) + "\"} ";
 		msg += " }";
 
 		return msg;

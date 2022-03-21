@@ -1,14 +1,23 @@
 package com.renderapi;
 
 import java.io.*;
+
 import java.net.*;
 
 import org.json.simple.*;
 import org.json.simple.parser.*;
 
 import java.nio.charset.StandardCharsets;
-	
-class ClientHandler extends Thread 
+import java.util.ArrayList;
+
+/**
+ * De ClientHandler Thread handelt alle netwerkverbingen af. 
+ * En het voert de betreffende RenderCommand uit.
+ *
+ * @author      Dagmar Hofman
+*/
+
+public class ClientHandler extends Thread 
 {
 	// Data input, output en socket
 	DataInputStream dataInput;
@@ -16,8 +25,18 @@ class ClientHandler extends Thread
 	Socket sock;
 
 	RenderCommands cmds;
-
-	public ClientHandler(Socket s, DataInputStream dis, DataOutputStream dos, RenderConfig settings ) 
+	ArrayList<QueueAttributes> queue;
+	
+	/**
+	* De constructor
+	* 
+	* @param s Een bestaande <b>socket</b> voor netwerkcommunicatie.
+	* @param dis Een bestaande <b>data input stream</b> voor netwerkcommunicatie.
+	* @param dos Een bestaande <b>data output stream</b> voor netwerkcommunicatie.
+	* @param settings Een referentie naar de RenderConfig class.
+	* @param queue Een referentie naar de globale <b>queue</b> met render opdrachten.
+	*/
+	public ClientHandler(Socket s, DataInputStream dis, DataOutputStream dos, RenderConfig settings, ArrayList<QueueAttributes> queue ) 
 	{
 		// initialiseer socket en data streams
 		this.sock = s;
@@ -26,9 +45,17 @@ class ClientHandler extends Thread
 
 		// attach render commands
 		cmds = new RenderCommands();
+		this.queue = queue;
 	}
 
 
+	/**
+	*
+	* Deze functie contoleert of de opgegeven data <i>valid JSON</i> is.
+	* 
+	* @param test De te testen string
+	* @return true als het JSON betreft, false als de data geen JSON is.
+	*/
 	public boolean testJsonValid(String test) {
 
 		// simpele wrapper om te controleren of de input JSON data betreft
@@ -47,6 +74,13 @@ class ClientHandler extends Thread
 	    
 	}
 	
+	/**
+	*
+	* Deze functie handelt de JSON data verder af.
+	* 
+	* @param str De af te te handelen JSON string.
+	* @see RenderCommands
+	*/
 	public void handleJson( String str ) {
 		
 		// handleJson wordt aangeroepen als de json data valid is
@@ -86,7 +120,11 @@ class ClientHandler extends Thread
 		}
 	
 		// Alleen het get_projects commando heeft geen arguments nodig.
-		if ( json.containsKey( "arguments" ) == false && command.compareTo("get_projects") != 0 && command.compareTo("get_system_status") != 0 ) {
+		if ( json.containsKey( "arguments" ) == false && 
+				command.compareTo("get_projects") != 0 && 
+				command.compareTo("get_system_status") != 0 && 
+				command.compareTo("queue_get") != 0  
+				) {
 			retMsg = MessageHandler.prepareError(RenderAPI.NetworkErrorType.NOCMDARG, "Missing arguments." );
 			sendText( retMsg );
 			return;
@@ -113,6 +151,12 @@ class ClientHandler extends Thread
 				
 	}	
 	
+	/**
+	*
+	* Een eenvoudige wrapper om tekst naar de socket server output te sturen.
+	* 
+	* @param text De te sturen tekst
+	*/
 	public void sendText( String text ) 
 	{
 		// eenvoudige wrapper om text naar via socket te sturen
@@ -123,6 +167,11 @@ class ClientHandler extends Thread
 		}
 	}
 	
+	/**
+	*
+	* De main thread run()
+	* 
+	*/
 	@Override
 	public void run() 
 	{
@@ -133,8 +182,13 @@ class ClientHandler extends Thread
 		// maak een InputStreamReader en een BufferedReader
 		InputStreamReader inp = new InputStreamReader(dataInput,
 				StandardCharsets.UTF_8);
+	
 		
 		BufferedReader br = new BufferedReader(inp);		
+
+		ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "Thread started" );
+		
+		while( recv == "" ) {
 		
 		// Lees de JSON data van de socket.
 		try {
@@ -149,6 +203,8 @@ class ClientHandler extends Thread
 			// DESIGNQUESTION misschien hier een foutmelding naar de socket sturen?
 			ServerLog.attachMessage( RenderAPI.MessageType.ERROR, "IO Error " + e.getMessage()  );
 		}
+		}
+		
 		ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "Recieved message: " + recv  );
 		
 		// Handel valid JSON data of stuur foutmelding

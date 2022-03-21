@@ -7,13 +7,20 @@ import java.io.DataOutputStream;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 
+import java.util.ArrayList;
+
 import java.io.*;
 import java.net.Socket;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class RenderCommands {
 	// Hanteerd de Render Commands
 	// Zie ook de protocol.txt
 	RenderConfig cfg;
+	
+	static int renderCommandCount = 0;
+	
 	MessageHandler msgs;
 	String jsonCmdOutput;
 
@@ -493,6 +500,187 @@ public class RenderCommands {
 	public String doCmdGetSystemStatus( String arg ) {
 		return RenderAPI.systemOutJson();
 	}
+
+	public String doCmdDelProjectFromQueue(String arg ) {
+		int index = -1;
+		String msg = "";
+		
+		msg = MessageHandler.prepareError( RenderAPI.NetworkErrorType.NOCMDARG, "Failing Command: " + arg );
+		
+		// Controleer of JSON klopt
+		JSONParser parser = new JSONParser();
+		JSONObject json;	
+		
+		try {
+			json = (JSONObject) parser.parse(arg);
+		} catch (Exception e ) {
+			msg = MessageHandler.prepareError(RenderAPI.NetworkErrorType.JSONINVALID, "" );
+			return msg;
+		}
+		
+		// controleer project_num
+		if ( json.containsKey( "id" ) == false ) {
+			msg = MessageHandler.prepareError(RenderAPI.NetworkErrorType.RENDERCMDFAIL, "Could not delete project. No id." );
+			return msg;
+		}
+		
+		int id;
+		String idStr;
+		
+		idStr = json.get( "id" ).toString();
+		
+		id = Integer.parseInt(idStr);
+		
+		for( QueueAttributes attr: RenderAPI.queue ) {
+			if( attr.id == id ) {
+				index = RenderAPI.queue.indexOf(attr);
+				break;
+			}
+		}
+		
+		if( index == -1 ) {
+			msg = MessageHandler.prepareError(RenderAPI.NetworkErrorType.RENDERCMDFAIL, "Could not delete project. Invalid Id: " + id );
+			return msg;
+		}
+		
+		QueueAttributes ret;
+		
+		ret = RenderAPI.queue.remove(index);
+		
+		msg = MessageHandler.prepareMessage(RenderAPI.NetworkMessageType.RENDERCMDOK, "Deleted project. Id: " + ret.id );
+		return msg;
+
+	}
+
+	public static String escape( String input ) {
+		String retval;
+		retval = input.replaceAll("\"", "\\\"");
+		return retval;
+	}
+	
+	public static String doCmdGetProjectQueue() {
+
+		String jsonMsg = "{ \"queue\" : [ ";
+		boolean empty = true;
+		for( QueueAttributes attr: RenderAPI.queue ) {
+			empty = false;
+			
+			SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+			
+			jsonMsg += " { \"record\": { \"id\": " + attr.id + ", ";
+			jsonMsg += " \"start\": \"" + formatter.format(attr.start)  + "\"  , ";
+			jsonMsg += " \"aerender_exe\": \"" + escape(attr.attributes.aerenderExe) + "\"  , ";
+			jsonMsg += " \"project_path\": \"" + escape(attr.attributes.projectPath) + "\"  , ";
+			jsonMsg += " \"output_file\": \"" + escape(attr.attributes.outputFile) + "\"  , ";
+			jsonMsg += " \"comp_name\": \"" + escape( attr.attributes.compositionName ) + "\"  , ";
+			jsonMsg += " \"output_settings\": \"" + escape(attr.attributes.outputSettings) + "\"  , ";
+			jsonMsg += " \"render_settings\": \"" + escape(attr.attributes.renderSettings) + "\" } },";
+
+		}
+			
+		if( !empty ) {
+			jsonMsg = jsonMsg.substring(0, jsonMsg.length() - 2);
+			jsonMsg += " } ] }";
+		} else {
+			jsonMsg += "  ] }";
+		}
+		
+		return jsonMsg;
+	}
+
+	public String doCmdAddProjectQueue(String arg ) {
+
+		int index = -1;
+		String msg = "";
+		int projNum = -1;
+
+		msg = MessageHandler.prepareError( RenderAPI.NetworkErrorType.NOCMDARG, "Failing Command: " + arg );
+
+		QueueAttributes attr = new QueueAttributes();
+		
+		// Controleer of JSON klopt
+		JSONParser parser = new JSONParser();
+		JSONObject json;	
+
+		try {
+			json = (JSONObject) parser.parse(arg);
+		} catch (Exception e ) {
+			msg = MessageHandler.prepareError(RenderAPI.NetworkErrorType.JSONINVALID, "" );
+			return msg;
+		}
+		
+		// controleer project_num
+		if ( json.containsKey( "project_num" ) == false ) {
+			msg = MessageHandler.prepareError(RenderAPI.NetworkErrorType.PROJECTGETERR, "Missing project_num argument." );
+			return msg;
+		}
+			
+		String projNumStr = json.get("project_num").toString();
+		
+		projNum = Integer.parseInt( projNumStr );
+
+				
+		// haal het project op uit de lijst
+		for( RenderAttributes attributes : RenderAPI.projects ) {
+			if(attributes.projectNum == projNum  ) {
+				index = RenderAPI.projects.indexOf(attributes);
+				break;
+			}
+		}
+		
+		if( index == -1 ) {
+			msg = MessageHandler.prepareError( RenderAPI.NetworkErrorType.GETATTRERR, "Project not found. Project Num: " + projNum );
+			return msg;
+		} 		
+
+		
+		attr.attributes.projectNum = projNum;
+		
+		attr.attributes.aerenderExe = RenderAPI.projects.get(index).aerenderExe;
+		attr.attributes.projectPath = RenderAPI.projects.get(index).projectPath ;
+		attr.attributes.compositionName = RenderAPI.projects.get(index).compositionName;
+		attr.attributes.outputFile = RenderAPI.projects.get(index).outputFile;
+		
+		if(  RenderAPI.projects.get(index).renderSettings != ""  ) {
+			attr.attributes.renderSettings = RenderAPI.projects.get(index).renderSettings;
+		}
+		if(  RenderAPI.projects.get(index).outputSettings != ""  ) {
+			attr.attributes.outputSettings = RenderAPI.projects.get(index).outputSettings;
+		}
+
+		
+		SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");  
+		Date date = new Date();		
+		String dateStr = formatter.format(date);
+		
+		// controleer project_num
+		if ( json.containsKey( "start" ) == false ) {
+			attr.start = date;
+			ServerLog.attachMessage( RenderAPI.MessageType.WARNING, "No start time for render command: " + attr.id + " Defaulting to current time." );
+		} else {
+			dateStr = json.get("start").toString();
+		}
+		
+		try {
+			date = formatter.parse(dateStr);
+			attr.start = date;
+		} catch ( Exception e ) {
+			ServerLog.attachMessage( RenderAPI.MessageType.ERROR, "Could not parse: " + dateStr + " " + e.getMessage() );
+			msg = MessageHandler.prepareError(RenderAPI.NetworkErrorType.RENDERCMDFAIL , "Parse Error." );
+			return msg;
+		}
+		
+		RenderCommands.renderCommandCount++;
+		
+		attr.id = RenderCommands.renderCommandCount;
+		
+		RenderAPI.queue.add(attr);
+					
+		msg = MessageHandler.prepareMessage(RenderAPI.NetworkMessageType.RENDERCMDOK, "Render data added to queue.");
+		ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "Render Command (" + attr.id + "), Date (" + formatter.format(date) + ") Added."  );
+			
+		return msg;
+	}
 	
 	public String doCmdSetRenderAttributes(String arg ) {
 		int index = -1;
@@ -621,7 +809,9 @@ public class RenderCommands {
 
 	
 	public String processCommand(String cmd, String arg  )	{
-		String retval = "undefined - 5";
+		String retval;
+		
+		retval = MessageHandler.prepareError( RenderAPI.NetworkErrorType.NOCMDARG, "No Such Command: " + cmd );
 
 		ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "handling command: " + cmd);
 		
@@ -650,8 +840,16 @@ public class RenderCommands {
 			retval = this.doCmdSyncProjectFiles(arg); 
 		} else if( cmd.compareTo( "get_system_status" ) == 0 ) {
 			retval = this.doCmdGetSystemStatus(arg); 
+		} else if( cmd.compareTo( "queue_add" ) == 0 ) {
+			retval = this.doCmdAddProjectQueue(arg); 
+		} else if( cmd.compareTo( "queue_get" ) == 0 ) {
+			retval = this.doCmdGetProjectQueue(); 
+		} else if( cmd.compareTo( "queue_del" ) == 0 ) {
+			retval = this.doCmdDelProjectFromQueue(arg); 
 		}
 
+		RenderAPI.systemOutJson();
+		
 		return retval;
 	}
 	

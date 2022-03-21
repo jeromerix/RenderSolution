@@ -39,45 +39,49 @@ public class MessageHandler {
 				 + " \"message\": " + msg.get() + ","
 				 + " \"project_num\": " + arg +","
 				 + " \"description\": \"Project added.\""
-				 + "}\n";
+				 + "}";
 		} else if (msg == RenderAPI.NetworkMessageType.GETATTR ) {
 			retval = "{"
 					+ "  \"message\": " + msg.get() + ","
-					+ "  \"project_num\": " + arg +","
-					+ "  \"render_attributes\": \"" + arg + "\"" 
-					+ "}\n";
+					+ "  \"project_num\": " + arg + ""
+					+ "}";
 		} else if (msg == RenderAPI.NetworkMessageType.PROJECTDELETE  ) {
 			retval = "{"
 					+ "\"message\": " + msg.get() + ", "
 					+ "\"project_num\": " + arg + ", "
 					+ "\"description\": \"Project Deleted\" "
-					+ "}\n";
+					+ "}";
 		} else if (msg == RenderAPI.NetworkMessageType.SETATTR) {
 			retval = "{"
 					+ "\"message\": " + msg.get() + ", "
 					+ "\"project_num\": " + arg +", "
 					+ "\"description\": \"Render Attributes changed for project " + arg + ".\" "
-					+ "}\n";
+					+ "}";
 		} else if (msg == RenderAPI.NetworkMessageType.FILESAVED ) {
 			retval = "{"
 					+ " \"message\": " + msg.get() + ", "
 					+ "\"description\": \"File saved. (" + arg + ") KBytes written. \" "
-					+ "}\n";
+					+ "}";
 		} else if (msg == RenderAPI.NetworkMessageType.PROJECTADDFILE ) {
 			retval = "{"
 					+ " \"message\": " + msg.get() + ", "
 					+ "\"description\": \"File added to project. (" + arg + ") \" "
-					+ "}\n";
+					+ "}";
 		} else if (msg == RenderAPI.NetworkMessageType.PROJECTSYNC ) {
 			retval = "{"
 					+ " \"message\": " + msg.get() + ", "
 					+ "\"description\": \"Project files synchronized.\" "
-					+ "}\n";
+					+ "}";
 		} else if (msg == RenderAPI.NetworkMessageType.PROJECTDELFILE ) {
 			retval = "{"
 					+ " \"message\": " + msg.get() + ", "
 					+ "\"description\": \"File removed from project. (" + arg + ") \" "
-					+ "}\n";
+					+ "}";
+		} else if (msg == RenderAPI.NetworkMessageType.RENDERCMDOK ) {
+			retval = "{"
+					+ " \"message\": " + msg.get() + ", "
+					+ "\"description\": \"Render Queue OK. (" + arg + ") \" "
+					+ "}";
 		}
 		ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "prepared message: " + stripNewlines(retval) );
 		lastMessage = retval;
@@ -98,15 +102,15 @@ public class MessageHandler {
 					+ "  \"file_name\": \"" + fileName + "\","
 					+ "  \"port\": \"" + port + "\","
 					+ "  \"description\": \"Waiting for file upload...\""
-					+ "}\n";
+					+ "}";
 		}  else if (msg == RenderAPI.NetworkMessageType.DOWNLOADFILE) {
-			retval = "{\n"
-					+ "  \"message\": " + msg.get() + ",\n"
-					+ "  \"project_num\": " + arg +",\n"
-					+ "  \"file_name\": \"" + fileName + "\",\n"
-					+ "  \"port\": \"" + port + "\",\n"
-					+ "  \"description\": \"Waiting for file download...\"\n"
-					+ "}\n";
+			retval = "{"
+					+ "  \"message\": " + msg.get() + ","
+					+ "  \"project_num\": " + arg +","
+					+ "  \"file_name\": \"" + fileName + "\","
+					+ "  \"port\": \"" + port + "\","
+					+ "  \"description\": \"Waiting for file download...\""
+					+ "}";
 		} 
 		ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "prepared message: " + stripNewlines(retval) );
 		lastMessage = retval;
@@ -122,25 +126,25 @@ public class MessageHandler {
 			retval = "{ "
 					+ " \"error\": " + err.get() + ", "
 					+ " \"description\": \"No data received\" "
-					+ "} \n";			
+					+ "}";			
 		} else if (err == RenderAPI.NetworkErrorType.JSONINVALID ) {
 			retval = "{"
 					+ "  \"error\": " + err.get() + ", "
 					+ "  \"description\": \"JSON data invalid\" "
-					+ "} \n";
+					+ "}";
 		} else if (err == RenderAPI.NetworkErrorType.NOCMDARG ) {
 			retval = "{"
 					+ "  \"error\": " + err.get() + ", "
 					+ "  \"description\": \"No JSON command or argument\", "
 					+ "  \"reason\": \"" + arg + "\" "
-					+ "} \n";
+					+ "}";
 		}else if (err == RenderAPI.NetworkErrorType.SOCKETERR ) {
 			retval = 
 					"{ "
 					+ "  \"error\": " + err.get() + ", "
 					+ "  \"description\": \"Could not bind socket.\", "
 					+ "  \"reason\": \"" + arg + "\" "
-					+ "} \n";
+					+ "}";
 		/* Error messages 5-9 reserved ! */
 		} else if (err == RenderAPI.NetworkErrorType.FILETRANSFERERR ) {
 			retval = 
@@ -148,82 +152,88 @@ public class MessageHandler {
 					+ "  \"error\": " + err.get() + ", "
 					+ "  \"description\": \"File Transfer Error.\", "
 					+ "  \"reason\": \"" + arg + "\" "
-					+ "} \n";					
+					+ "}";					
 		} else if (err == RenderAPI.NetworkErrorType.IOERR ) {
 			retval = 
 					"{ "
 					+ "  \"error\": " + err.get() + ", "
 					+ "  \"description\": \"IO Error.\", "
 					+ "  \"reason\": \"" + arg + "\" "
-					+ "} \n";					
+					+ "}";					
 		} else if (err == RenderAPI.NetworkErrorType.UNKNOWNFILESIZE ) {
 			retval = 
 					"{ "
 					+ "  \"error\": " + err.get() + ", "
 					+ "  \"description\": \"File size unknown.\" "
-					+ "} \n";					
+					+ "}";					
 		}  else if (err == RenderAPI.NetworkErrorType.PROJECTADDERR ) {
 			retval = 
 					"{ "
 					+ "  \"error\": " + err.get() + ", "
 					+ "  \"description\": \"Could not add project.\", "
 					+ "  \"reason\": \"" + arg + "\" "
-					+ "} \n";					
+					+ "}";					
 		} else if (err == RenderAPI.NetworkErrorType.PROJECTFILEADDERR ) {
 			retval = 
 					"{ "
 					+ "  \"error\": " + err.get() + ", "
 					+ "  \"description\": \"Could not add project file.\", "
 					+ "  \"reason\": \"" + arg + "\" "
-					+ "} \n";					
+					+ "}";					
 		}else if (err == RenderAPI.NetworkErrorType.PROJECTFILEDELERR ) {
 			retval = 
 					"{ "
 					+ "  \"error\": " + err.get() + ", "
 					+ "  \"description\": \"Could not delete project file.\" "
 					+ "  \"file_name\": \"" + arg + "\" "
-					+ "} \n";					
+					+ "}";					
 		} else if (err == RenderAPI.NetworkErrorType.PROJECTGETERR ) {
 			retval = 
 					"{ "
 					+ "  \"error\": " + err.get() + ", "
 					+ "  \"description\": \"Could not get projects.\", "
 					+ "  \"reason\": \"" + arg + "\" "
-					+ "} \n";
+					+ "}";
 		} else if (err == RenderAPI.NetworkErrorType.PROJECTDELERR ) {
 			retval = 
 					"{ "
 					+ "  \"error\": " + err.get() + ", "
 					+ "  \"description\": \"Could not delete project.\", "
 					+ "  \"reason\": \"" + arg + "\" "
-					+ "} \n";
+					+ "}";
 		} else if (err == RenderAPI.NetworkErrorType.GETATTRERR) {
 			retval =
 					"{"
 					+ "  \"error\": " + err.get() + ", "
 					+ "  \"description\": \"Could not get render attributes.\", "
 					+ "  \"reason\": \"" + arg + "\" "
-					+ "} \n";
+					+ "}";
 		} else if (err == RenderAPI.NetworkErrorType.SETATTRERR ) {
 			retval = 
 					"{ "
 					+ "  \"error\": " + err.get() + ", "
 					+ "  \"description\": \"Could not set render attributes.\", "
 					+ "  \"reason\": \"" + arg + "\" "
-					+ "} \n";
+					+ "}";
 		} else if (err == RenderAPI.NetworkErrorType.PROJECTSYNCERR ) {
 			retval = 
 					"{ "
 					+ "  \"error\": " + err.get() + ", "
 					+ "  \"description\": \"Could not sync project files.\", "
 					+ "  \"reason\": \"" + arg + "\" "
-					+ "} \n";
+					+ "}";
 		} else if (err == RenderAPI.NetworkErrorType.FILENOTFOUNDERR ) {
 			retval = 
 					"{ "
 					+ "  \"error\": " + err.get() + ", "
 					+ "  \"description\": \"File not found. (" + arg + ") .\" "
-					+ "} \n";
+					+ "}";
+		} else if (err == RenderAPI.NetworkErrorType.RENDERCMDFAIL ) {
+			retval = 
+					"{ "
+					+ "  \"error\": " + err.get() + ", "
+					+ "  \"description\": \"Render Queue Fail. (" + arg + ") .\" "
+					+ "}";
 		}
 		lastMessage = retval;
 		ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "prepared error: " + stripNewlines(retval) );

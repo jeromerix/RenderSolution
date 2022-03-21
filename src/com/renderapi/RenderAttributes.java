@@ -7,9 +7,9 @@ public class RenderAttributes {
 	String projectName;
 		
 	// DESIGNQUESTION aerenderexe final maken, hard-coded?
-	String aerenderExe = "";
+	String aerenderExe = "c:\\Program Files\\Adobe\\Adobe After Effects 2020\\Support Files\\aerender.exe";
 	String projectPath = "";
-	String compositionName = "";
+	String compositionName = "Comp 1";
 	String renderSettings = "";
 	String outputSettings = "";
 	String outputFile = "";
