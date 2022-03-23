@@ -1,35 +1,9 @@
-+ done
-& busy
-- todo
+ { "uuid": "c5cd6fae-db02-4d28-a09a-4e795001b847",  "active": "false",  "start_time": "0:00:00:00",  "end_time": "0:00:09:24",  "progress_time": "0:00:09:24"},
 
-+ add_project
+ { "uuid": "3243494c-0e17-476b-b7e6-3cc02cd6f4c9",  "active": "false",  "start_time": "0:00:00:00",  "end_time": "0:00:09:24",  "progress_time": "0:00:09:24"},
 
-+ delete_project
+ { "uuid": "60d25f8e-a15c-4120-a50b-c23e1ac4ff11",  "active": "true",  "start_time": "0:00:00:00",  "end_time": "0:00:09:24",  "progress_time": "0:00:09:08"},
 
-+ get_projects			
+ { "uuid": "c4b3fbc9-fe0c-4c8a-9c16-487b8224ba48",  "active": "false",  "start_time": "0:00:00:00",  "end_time": "0:00:09:24",  "progress_time": "none"},
 
-+ get_render_attributes
-
-+ set_render_attributes		
-
-TESTEN: 
-
-/* Morgen */
-+ save_file
-+ receive_file 
-
-/* woensdag, do, vr */
-- do_render	
-- get_render_status
-
-/*
-
-	Wensen?
-	
-	user render credits ?
-	
-	get project files xml.
-	
-	
-	
-*/
+ { "uuid": "60d25f8e-a15c-4120-a50b-c23e1ac4ff11",  "active": "true",  "start_time": "0:00:00:00",  "end_time": "0:00:09:24",  "progress_time": "0:00:09:08"} ] } 

@@ -123,6 +123,7 @@ public class ClientHandler extends Thread
 		if ( json.containsKey( "arguments" ) == false && 
 				command.compareTo("get_projects") != 0 && 
 				command.compareTo("get_system_status") != 0 && 
+				command.compareTo("get_render_status") != 0 && 
 				command.compareTo("queue_get") != 0  
 				) {
 			retMsg = MessageHandler.prepareError(RenderAPI.NetworkErrorType.NOCMDARG, "Missing arguments." );
@@ -190,19 +191,19 @@ public class ClientHandler extends Thread
 		
 		while( recv == "" ) {
 		
-		// Lees de JSON data van de socket.
-		try {
-			char c;
-			int i = 0;
-	        while ( br.ready() && i++ < 8196 ) {
-	        	c = (char)br.read();
-	        	str += "" + c;
-	        }
-			recv += str;
-		} catch (IOException e) {
-			// DESIGNQUESTION misschien hier een foutmelding naar de socket sturen?
-			ServerLog.attachMessage( RenderAPI.MessageType.ERROR, "IO Error " + e.getMessage()  );
-		}
+			// Lees de JSON data van de socket.
+			try {
+				char c;
+				int i = 0;
+		        while ( br.ready() && i++ < 8196 ) {
+		        	c = (char)br.read();
+		        	str += "" + c;
+		        }
+				recv += str;
+			} catch (IOException e) {
+				// DESIGNQUESTION misschien hier een foutmelding naar de socket sturen?
+				ServerLog.attachMessage( RenderAPI.MessageType.ERROR, "IO Error " + e.getMessage()  );
+			}
 		}
 		
 		ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "Recieved message: " + recv  );

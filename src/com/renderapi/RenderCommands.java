@@ -501,6 +501,46 @@ public class RenderCommands {
 		return RenderAPI.systemOutJson();
 	}
 
+	public String doCmdGetRenderStatus() {
+		String jsonMsg = "{ \"render_status\" : [ ";
+		boolean empty = true;
+		
+		for( ExecAttributes attr: RenderAPI.execProgress ) {
+			empty = false;
+			
+			SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+			
+			jsonMsg += "\n { \"uuid\": \"" + attr.uuid + "\", ";
+			jsonMsg += " \"active\": \"" + attr.active + "\", ";
+			jsonMsg += " \"start_time\": \"" + attr.startTime + "\", ";
+			jsonMsg += " \"end_time\": \"" + attr.endTime + "\", ";
+			jsonMsg += " \"progress_time\": \"" + attr.progressTime + "\"},\n";
+
+		}
+			
+		jsonMsg = jsonMsg.substring(0, jsonMsg.length() - 2);
+
+		jsonMsg += " ] } \n";
+		
+		return jsonMsg;
+	}
+
+	public static void doCmdDelProjectFromQueueId( int id ) {
+		
+		int removeIndex = -1;
+		
+		for( QueueAttributes attr: RenderAPI.queue  ) {
+			if( attr.id == id ) {
+				removeIndex = RenderAPI.queue.indexOf(attr);
+			}
+		}
+		
+		if( removeIndex != -1 ) {
+			RenderAPI.queue.remove(removeIndex);
+		}
+		
+	}
+	
 	public String doCmdDelProjectFromQueue(String arg ) {
 		int index = -1;
 		String msg = "";
@@ -571,6 +611,7 @@ public class RenderCommands {
 			jsonMsg += " \"start\": \"" + formatter.format(attr.start)  + "\"  , ";
 			jsonMsg += " \"aerender_exe\": \"" + escape(attr.attributes.aerenderExe) + "\"  , ";
 			jsonMsg += " \"project_path\": \"" + escape(attr.attributes.projectPath) + "\"  , ";
+			jsonMsg += " \"project_name\": \"" + escape(attr.attributes.projectName) + "\"  , ";
 			jsonMsg += " \"output_file\": \"" + escape(attr.attributes.outputFile) + "\"  , ";
 			jsonMsg += " \"comp_name\": \"" + escape( attr.attributes.compositionName ) + "\"  , ";
 			jsonMsg += " \"output_settings\": \"" + escape(attr.attributes.outputSettings) + "\"  , ";
@@ -588,6 +629,7 @@ public class RenderCommands {
 		return jsonMsg;
 	}
 
+	
 	public String doCmdAddProjectQueue(String arg ) {
 
 		int index = -1;
@@ -638,6 +680,7 @@ public class RenderCommands {
 		
 		attr.attributes.aerenderExe = RenderAPI.projects.get(index).aerenderExe;
 		attr.attributes.projectPath = RenderAPI.projects.get(index).projectPath ;
+		attr.attributes.projectName = RenderAPI.projects.get(index).projectName ;
 		attr.attributes.compositionName = RenderAPI.projects.get(index).compositionName;
 		attr.attributes.outputFile = RenderAPI.projects.get(index).outputFile;
 		
@@ -673,9 +716,10 @@ public class RenderCommands {
 		RenderCommands.renderCommandCount++;
 		
 		attr.id = RenderCommands.renderCommandCount;
+		attr.renderActive = false;
 		
 		RenderAPI.queue.add(attr);
-					
+				
 		msg = MessageHandler.prepareMessage(RenderAPI.NetworkMessageType.RENDERCMDOK, "Render data added to queue.");
 		ServerLog.attachMessage( RenderAPI.MessageType.DEBUG, "Render Command (" + attr.id + "), Date (" + formatter.format(date) + ") Added."  );
 			
@@ -842,10 +886,13 @@ public class RenderCommands {
 			retval = this.doCmdGetSystemStatus(arg); 
 		} else if( cmd.compareTo( "queue_add" ) == 0 ) {
 			retval = this.doCmdAddProjectQueue(arg); 
+			RenderAPI.dispatch();
 		} else if( cmd.compareTo( "queue_get" ) == 0 ) {
-			retval = this.doCmdGetProjectQueue(); 
+			retval = RenderCommands.doCmdGetProjectQueue(); 
 		} else if( cmd.compareTo( "queue_del" ) == 0 ) {
 			retval = this.doCmdDelProjectFromQueue(arg); 
+		} else if( cmd.compareTo( "get_render_status" ) == 0 ) {
+			retval = this.doCmdGetRenderStatus(); 
 		}
 
 		RenderAPI.systemOutJson();

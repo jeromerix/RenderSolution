@@ -1,5 +1,7 @@
 package com.renderapi;
 
+import com.renderapi.RenderCommands;
+
 import java.io.*;
 
 import java.net.*;
@@ -10,6 +12,8 @@ import org.json.simple.parser.*;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 
 /**
  * De RenderAPI is een applicatie die het mogelijk maakt voor de gebruiker
@@ -30,8 +34,8 @@ public class RenderAPI {
 	
 	// Deze twee variabelen ophalen via INI file
 	static int port = 4242; 
-	static String serverLogFilename = "c:\\RenderSolutions\\logfile.txt"; 
-	static String serverStatusJSON = "c:\\RenderSolutions\\status.json"; 
+	static String serverLogFilename = "c:/RenderSolutions/logfile.txt"; 
+	static String serverStatusJSON = "c:/RenderSolutions/status.json"; 
 	
 	//regelt add project, en het wijzigen van render attributes
 	static RenderConfig settings;
@@ -39,6 +43,9 @@ public class RenderAPI {
 	// lijst met projecten
 	static ArrayList<RenderAttributes> projects;
 	static ArrayList<QueueAttributes> queue;
+	
+	static CopyOnWriteArrayList<ExecAttributes> execProgress; 
+	static long execCount;
 	
 	// globale server log file
 	// DESIGNQUESTION deze via netwerk en JSON toegankelijk maken?
@@ -254,6 +261,7 @@ public class RenderAPI {
 			
 			attr.attributes.aerenderExe = queueJson.get("aerender_exe").toString();
 			attr.attributes.projectPath = queueJson.get("project_path").toString();
+			attr.attributes.projectName = queueJson.get("project_name").toString();
 			attr.attributes.compositionName = queueJson.get("comp_name").toString();
 			attr.attributes.renderSettings = queueJson.get("render_settings").toString();
 			attr.attributes.outputSettings = queueJson.get("output_settings").toString();
@@ -333,7 +341,7 @@ public class RenderAPI {
 			
 			json += "\"files\" : [ ";
 			for( String fileName: projectFiles ) {
-				fileName = fileName.replaceAll("\\\\+","\\\\\\\\");
+				fileName = fileName;
 				json += "\"" + fileName + "\",";
 			}
 			json = json.substring(0, json.length() - 1);  
@@ -392,17 +400,22 @@ public class RenderAPI {
 		}
 		return json;
 	}
-	
+
+	public static void dispatch()
+	{
+		Thread thr = new RenderHandler();
+		thr.start();
+	}
 	
 	/**
-	* De <b>main</b> routine.
+	* The <b>main</b> routine.
 	*/
 	public static void main( String[] args ) {
 				
 		// Maak de server log
 		// eerste flag is voor verbose (Schrijf de server log naar System.out)
 		// tweede flag is voor debug (Schrijf de debug messages naar System.out en logfile)
-		log = new ServerLog( true, true );
+		log = new ServerLog( true, false );
 		
 		// Globale server socket
 		ServerSocket serverSock = null;
@@ -411,6 +424,8 @@ public class RenderAPI {
 		settings = new RenderConfig();
 		projects = new ArrayList<RenderAttributes>();
 		RenderAPI.queue = new ArrayList<QueueAttributes>();
+		RenderAPI.execProgress = new CopyOnWriteArrayList<ExecAttributes>();
+		RenderAPI.execCount = 0;
 		try {
 			// probeer de server socket te openen
 			serverSock = new ServerSocket( port );
@@ -426,11 +441,12 @@ public class RenderAPI {
 		// Lees de systeem status JSON
 		systemParseJSON();
 				
+		dispatch();
+
 		// Oneindige lus voor netwerk client requests
 		while (true)
 		{
 			networkLoop( serverSock );
-			// renderLoop();
 		}
 	}
 }
