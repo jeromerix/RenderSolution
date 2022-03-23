@@ -149,7 +149,7 @@ public class ExecHandler  extends Thread  {
 
 			process.waitFor();
 			tmpAttr.active = false;
-			ServerLog.attachMessage( RenderAPI.MessageType.NOTICE, "Render Job Finished: " + this.uuidStr + " " + this.queueId );
+			ServerLog.attachMessage( RenderAPI.MessageType.NOTICE, "Render Job Finished: " + this.uuidStr );
 			tmpAttr.finished = true;
 			
     		for( i=0;i<RenderAPI.execProgress.size(); i++ ) {
@@ -162,7 +162,7 @@ public class ExecHandler  extends Thread  {
     		RenderAPI.systemOutJson();
     		
     		RenderCommands.doCmdDelProjectFromQueueId( this.queueId );
-    		
+
 		} catch( Exception e ) {
 
     		ServerLog.attachMessage( RenderAPI.MessageType.ERROR, "Exception: " + e.getMessage() );

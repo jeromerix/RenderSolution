@@ -124,6 +124,7 @@ public class ClientHandler extends Thread
 				command.compareTo("get_projects") != 0 && 
 				command.compareTo("get_system_status") != 0 && 
 				command.compareTo("get_render_status") != 0 && 
+				command.compareTo("get_server_log") != 0 && 
 				command.compareTo("queue_get") != 0  
 				) {
 			retMsg = MessageHandler.prepareError(RenderAPI.NetworkErrorType.NOCMDARG, "Missing arguments." );

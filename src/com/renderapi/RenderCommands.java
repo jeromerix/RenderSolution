@@ -512,15 +512,19 @@ public class RenderCommands {
 			
 			jsonMsg += "\n { \"uuid\": \"" + attr.uuid + "\", ";
 			jsonMsg += " \"active\": \"" + attr.active + "\", ";
+			jsonMsg += " \"finished\": \"" + attr.finished + "\", ";
 			jsonMsg += " \"start_time\": \"" + attr.startTime + "\", ";
 			jsonMsg += " \"end_time\": \"" + attr.endTime + "\", ";
 			jsonMsg += " \"progress_time\": \"" + attr.progressTime + "\"},\n";
 
 		}
-			
-		jsonMsg = jsonMsg.substring(0, jsonMsg.length() - 2);
+		if( RenderAPI.execProgress.size() > 0 ) {
+			jsonMsg = jsonMsg.substring(0, jsonMsg.length() - 2);
+		}
 
 		jsonMsg += " ] } \n";
+		
+		RenderCommands.doCmdFlushRenderStatus();
 		
 		return jsonMsg;
 	}
@@ -540,6 +544,27 @@ public class RenderCommands {
 		}
 		
 	}
+
+	public static void doCmdFlushRenderStatus( ) {
+
+		int removeIndex;
+		
+		do {
+			removeIndex = -1;
+		
+			for( ExecAttributes attr: RenderAPI.execProgress ) {
+				if( attr.finished ) {
+					removeIndex = RenderAPI.execProgress.indexOf(attr);
+				}
+			}
+			if( removeIndex != -1 ) {
+				RenderAPI.execProgress.remove(removeIndex);
+			}
+		} while( removeIndex != -1 );
+		
+	}
+	
+	
 	
 	public String doCmdDelProjectFromQueue(String arg ) {
 		int index = -1;
@@ -893,6 +918,8 @@ public class RenderCommands {
 			retval = this.doCmdDelProjectFromQueue(arg); 
 		} else if( cmd.compareTo( "get_render_status" ) == 0 ) {
 			retval = this.doCmdGetRenderStatus(); 
+		} else if( cmd.compareTo( "get_server_log" ) == 0 ) {
+			retval = ServerLog.getServerLogJSON(); 
 		}
 
 		RenderAPI.systemOutJson();

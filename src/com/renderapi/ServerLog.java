@@ -10,6 +10,7 @@ public class ServerLog {
 	
 	//de server logfile
 	static ArrayList<String> logfile = new ArrayList<String>();
+	static ArrayList<String> logfileJSON = new ArrayList<String>();
 	
 	// Verbosity
 	static boolean verbose;
@@ -22,12 +23,30 @@ public class ServerLog {
 		ServerLog.debug = debug;
 	}
 	
+	public static String getServerLogJSON() {
+		String json = "";
+		
+		json = "{";
+		json += "\"server_log\": [ ";
+		
+		for( String record: ServerLog.logfileJSON ) {
+			json += record + ",";
+		}
+		if( ServerLog.logfileJSON.size() > 0 ) {
+			json = json.substring(0, json.length() - 1);
+		}
+		json += " ] } ";
+
+		
+		return json;
+	}
 	public static void attachMessage ( RenderAPI.MessageType type, String message) {
 		// een server log message bestaat uit:
 		// Datum - Type - Message
 		SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");  
 		Date date = new Date();
 		String logMessage;
+		String logMessageJSON;
 		String typeStr = "";
 		switch( type ) {
 			case NOTICE:
@@ -46,9 +65,22 @@ public class ServerLog {
 				typeStr = "DEBUG";
 				break;
 		}
+		
 		logMessage = formatter.format(date) + " " + typeStr  + " " + message + "\n";
-
 		logfile.add(logMessage);
+		
+		if( type != RenderAPI.MessageType.DEBUG ) {
+			logMessageJSON = " { \"date\" : \"" + 
+				formatter.format(date) +
+				"\", \"type\": \"" + 
+				typeStr  + 
+				"\", \"message\" : \"" + 
+				message + 
+				"\" } ";
+			
+			logfileJSON.add(logMessageJSON);
+		}
+		
 		
 		// Maak de logfile aan
 		File file = new File(RenderAPI.serverLogFilename);
