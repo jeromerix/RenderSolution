@@ -34,8 +34,8 @@ public class RenderAPI {
 	
 	// Deze twee variabelen ophalen via INI file
 	static int port = 4242; 
-	static String serverLogFilename = "c:/RenderSolutions/logfile.txt"; 
-	static String serverStatusJSON = "c:/RenderSolutions/status.json"; 
+	static String serverLogFilename = "/RenderSolutions/logfile.txt"; 
+	static String serverStatusJSON = "/RenderSolutions/status.json"; 
 	
 	//regelt add project, en het wijzigen van render attributes
 	static RenderConfig settings;

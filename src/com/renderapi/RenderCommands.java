@@ -920,6 +920,8 @@ public class RenderCommands {
 			retval = this.doCmdGetRenderStatus(); 
 		} else if( cmd.compareTo( "get_server_log" ) == 0 ) {
 			retval = ServerLog.getServerLogJSON(); 
+		}  else if( cmd.compareTo( "force_render" ) == 0 ) {
+			RenderAPI.dispatch();
 		}
 
 		RenderAPI.systemOutJson();
